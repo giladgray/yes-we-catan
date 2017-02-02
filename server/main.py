@@ -1,4 +1,5 @@
 import json
+import random
 import view
 import webapp2
 
@@ -59,13 +60,55 @@ class Board:
         row.append(GraphTile())
       self.tile_array.append(row)
 
-    # Set north the directions.
+    # Set directions.
+    for row in range(len(self.tile_array)):
+      # This denotes the shift of the adjacent row's column index based on
+      # direction and location within the board (assuming a 5 row board).
+      ne_shift = 1 if row < 2 else 0
+      se_shift = 0 if row < 2 else -1
+      nw_shift = 0 if row < 3 else 1
+      sw_shift = -1 if row < 3 else 0
+      for col in range(len(self.tile_array[row])):
+        def GetTileOrNone(row, col):
+          if (row >= 0 and row < len(self.tile_array) and
+                  col >= 0 and col < len(self.tile_array[row])):
+            return self.tile_array[row][col]
+          else:
+            return None
+
+        curr = self.tile_array[row][col]
+        curr.neighbor_n = GetTileOrNone(row, col + 1)
+        curr.neighbor_ne = GetTileOrNone(row + 1, col + ne_shift)
+        curr.neighbor_se = GetTileOrNone(row + 1, col + se_shift)
+        curr.neighbor_s = GetTileOrNone(row, col - 1)
+        curr.neighbor_nw = GetTileOrNone(row - 1, col + nw_shift)
+        curr.neighbor_sw = GetTileOrNone(row - 1, col + sw_shift)
+
+  def GenerateRandomBoard(self):
+    resources = []
+    for i in range(4):
+      resources.append("WOOD")
+      resources.append("WHEAT")
+      resources.append("SHEEP")
+
+    for i in range(3):
+      resources.append("STONE")
+      resources.append("BRICK")
+
+    resources.append("DESERT")
+
+    numbers = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12]
+
     for row in self.tile_array:
-      prev_tile = None
       for tile in row:
-        if prev_tile:
-          prev_tile.neighbor_n = tile
-          tile.neighbor_s = prev_tile
+        resource = random.choice(resources)
+        tile.resource = resource
+        resources.remove(resource)
+
+        if resource != "DESERT":
+          number = random.choice(numbers)
+          tile.number_token = number
+          numbers.remove(number)
 
   def ToJson(self):
     tiles = []
@@ -218,6 +261,8 @@ class GenerateJson(webapp2.RequestHandler):
 
   def get(self):
     board = Board()
+    board.GenerateRandomBoard()
+    print board
     self.response.headers['Content-Type'] = 'application/json'
     self.response.write(board.ToJson())
 
@@ -226,8 +271,10 @@ class GenerateString(webapp2.RequestHandler):
 
   def get(self):
     board = Board()
+    board.GenerateRandomBoard()
     print board
-    self.response.write("GAH")
+    self.response.write(
+        "Check console output for a string. Nothing to see here...")
 
 app = webapp2.WSGIApplication([
     ('/generate_json', GenerateJson),
